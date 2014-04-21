@@ -1,18 +1,18 @@
-{ "name": "pimatic-plugin-template",
-  "description": "The plugin description",
-  "author": "Your Name <you@example.com> (http://your-website)",
-  "main": "my-plugin",
+{ "name": "pimatic-rpicam",
+  "description": "Raspberry pi camera support",
+  "author": "Oliver Schneider <oliverschneider89+pimatic@gmail.com> (http://sweetpi.de)",
+  "main": "cpicam",
   "files": [
-    "my-plugin.coffee",
+    "rpicam.coffee",
     "README.md",
-    "my-plugin-config-schema.coffee"
+    "rpicam-config-schema.coffee"
   ],
   "version": "0.7.0",
-  "homepage": "http://your-plugin-website",
+  "homepage": "http://pimatic.org",
   "private": true,
   "repository": {
     "type": "git",
-    "url": "git://github.com/pimatic/pimatic-plugin-template.git"
+    "url": "git://github.com/pimatic/pimatic-rpicam.git"
   },
   "dependencies": {
   },
