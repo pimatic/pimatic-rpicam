@@ -1,7 +1,7 @@
 { "name": "pimatic-rpicam",
   "description": "Raspberry pi camera support",
   "author": "Oliver Schneider <oliverschneider89+pimatic@gmail.com> (http://sweetpi.de)",
-  "main": "cpicam",
+  "main": "rpicam",
   "files": [
     "rpicam.coffee",
     "README.md",
