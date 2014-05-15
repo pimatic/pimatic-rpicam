@@ -33,7 +33,7 @@ module.exports = (env) ->
         if mobileFrontend?
           mobileFrontend.registerAssetFile 'js', "pimatic-rpicam/app/rpicam-item.coffee"
           mobileFrontend.registerAssetFile 'html', "pimatic-rpicam/app/rpicam-item.html"
-          # mobileFrontend.registerAssetFile 'html', "pimatic-datalogger/app/datalogger-page.jade"
+          mobileFrontend.registerAssetFile 'css', "pimatic-rpicam/app/rpicam.css"
         else
           env.logger.warn "rpicam could not find mobile-frontend. No gui will be available"
 
