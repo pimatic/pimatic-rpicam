@@ -1,9 +1,5 @@
-inited = false
-$(document).on( "pagebeforecreate", (event) ->
-  # Just execute it one time
-  if inited then return
-  inited = yes
-  
+
+$(document).on( "templateinit", (event) ->
   # define the item class
   class RpiCamDeviceItem extends pimatic.DeviceItem
     constructor: (data) ->
