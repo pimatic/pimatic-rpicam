@@ -17,6 +17,8 @@ $(document).on( "templateinit", (event) ->
       $.get("/api/device/#{@deviceId}/recordImage").fail(ajaxAlertFail)
 
     onShowPress: ->
+      pimatic.rpicam = this
+      jQuery.mobile.changePage '#rpicam', transition: 'slide'
 
     updatePreview: ->
       # to prevent caching

@@ -32,12 +32,14 @@ module.exports = (env) ->
         mobileFrontend = @framework.getPlugin 'mobile-frontend'
         if mobileFrontend?
           mobileFrontend.registerAssetFile 'js', "pimatic-rpicam/app/rpicam-item.coffee"
+          mobileFrontend.registerAssetFile 'js', "pimatic-rpicam/app/rpicam-page.coffee"
           mobileFrontend.registerAssetFile 'html', "pimatic-rpicam/app/rpicam-item.html"
+          mobileFrontend.registerAssetFile 'html', "pimatic-rpicam/app/rpicam-page.jade"
           mobileFrontend.registerAssetFile 'css', "pimatic-rpicam/app/rpicam.css"
         else
           env.logger.warn "rpicam could not find mobile-frontend. No gui will be available"
 
-      app.get('/rpicam/cam.jpg', (req, res) =>
+      app.get('/rpicam/preview.jpg', (req, res) =>
         res.sendfile(device.picFile)
       )
 
@@ -82,10 +84,20 @@ module.exports = (env) ->
 
   class RpiCamDevice extends env.devices.Device
 
+    attributes:
+      enabled:
+        description: "camera enabled"
+        type: Boolean
+        labels: ['on', 'off']
+      recording:
+        description: "video recording status"
+        type: Boolean
+        labels: ['recording', 'stopped']
+
     actions: 
-      startCamera:
+      enableCamera:
         description: "start the live preview"
-      stopCamera:
+      disableCamera:
         description: "stop the live preview"
       recordImage:
         description: "record a image"
@@ -113,11 +125,14 @@ module.exports = (env) ->
 
     getTemplateName: -> 'rpicam'
 
-    startCamera: -> @_executeCommand('ru 1')
-    stopCamera: -> @_executeCommand('ru 0')
+    enableCamera: -> @_executeCommand('ru 1')
+    disableCamera: -> @_executeCommand('ru 0')
     recordImage: -> @_executeCommand('im')
     recordVideoStart: -> @_executeCommand('ca 1')
     recordVideoStop: -> @_executeCommand('ca 2')
+
+    getEnabled: -> Q(yes)
+    getRecording: -> Q(yes)
 
 
   # ###Finally
