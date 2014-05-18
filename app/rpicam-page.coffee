@@ -11,7 +11,6 @@ $(document).on("pagecreate", '#rpicam', tc (event) ->
     hasPendingAction: ko.observable(no)
 
     constructor: ->
-      @deviceId = pimatic.rpicam.deviceId
       @videoButtonText = ko.computed( =>
         if @recording() then __('Stop Recording') else __('Start Recording')
       )
@@ -21,10 +20,15 @@ $(document).on("pagecreate", '#rpicam', tc (event) ->
       @previewUrl = '/rpicam/preview.jpg'
       @previewImageUrl = ko.observable(@previewUrl)
 
-      enabledAttr = pimatic.rpicam.getAttribute('enabled')
+      if pimatic.rpicam? then @setRpiCam(pimatic.rpicam)
+
+
+    setRpiCam: (rpicam) ->
+      @deviceId = rpicam.deviceId
+      enabledAttr = rpicam.getAttribute('enabled')
       if enabledAttr.value()?
         @enabled(enabledAttr.value())
-      recordingAttr = pimatic.rpicam.getAttribute('recording')
+      recordingAttr = rpicam.getAttribute('recording')
       if recordingAttr.value()?
         @recording(recordingAttr.value())
 
@@ -59,34 +63,34 @@ $(document).on("pagecreate", '#rpicam', tc (event) ->
         .fail(ajaxAlertFail)
         .always( => @hasPendingAction(no) )
 
-  try
-    pimatic.pages.rpicam = rpicam = new RpicamViewModel()
+  console.log "create page"
+  pimatic.pages.rpicam = rpicam = new RpicamViewModel()
 
-    pimatic.socket.on("device-attribute", tc (attrEvent) -> 
-      unless pimatic.rpicam? then return
-      unless attrEvent.id is pimatic.rpicam.deviceId then return
-      console.log attrEvent
-      switch attrEvent.name
-        when 'enabled' then rpicam.enabled(attrEvent.value)
-        when 'recording' then rpicam.recording(attrEvent.value)
-    )
+  pimatic.socket.on("device-attribute", tc (attrEvent) -> 
+    unless pimatic.rpicam? then return
+    unless attrEvent.id is pimatic.rpicam.deviceId then return
+    switch attrEvent.name
+      when 'enabled' then rpicam.enabled(attrEvent.value)
+      when 'recording' then rpicam.recording(attrEvent.value)
+  )
 
-    ko.applyBindings(rpicam, $('#rpicam')[0])
-  catch e
-    TraceKit.report(e)
+  ko.applyBindings(rpicam, $('#rpicam')[0])
   return
 )
 
 
-$(document).on("pagehide", '#rpicam', (event) ->
+$(document).on("pagehide", '#rpicam', tc (event) ->
   pimatic.pages.rpicam?.stopUpdatePreview()
   return
 )
 
-$(document).on("pagebeforeshow", '#rpicam', (event) ->
+$(document).on("pagebeforeshow", '#rpicam', tc (event) ->
+  console.log "pagebeforeshow"
   unless pimatic.rpicam?
     jQuery.mobile.changePage '#index'
     return false
-  pimatic.pages.rpicam.deviceId = pimatic.rpicam.deviceId
-  pimatic.pages.rpicam.startUpdatePreview()
+
+  pimatic.pages.rpicam.setRpiCam(pimatic.rpicam)
+  if pimatic.pages.rpicam.enabled()
+    pimatic.pages.rpicam.startUpdatePreview()
 )

@@ -5,15 +5,26 @@
   display: inline-block;
 }
 
-.rpicam-device .preview-buttons {
+.rpicam-device .preview-info {
   margin: 5px 10px 5px 0 !important;
   position: absolute;
   right: 0;
   top: 0;
 }
 
-.rpicam-device .preview-buttons .ui-btn {
-  vertical-align: top;
-  margin-top: -2px;
-  margin-bottom: 0;
+.rpicam-device .preview-info span{
+  position: relative;
+  top: -11px;
+  right: 10px;
+}
+
+#rpicam-full-previce-img {
+  width: 100%;
+  max-width: 512px;
+  margin:0px auto;
+}
+
+.rpicam-crontrols, .rpicam-full-previw {
+  width: 100%;
+  text-align: center;
 }

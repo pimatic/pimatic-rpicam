@@ -51,8 +51,6 @@ module.exports = (env) ->
           else
             throw new Error ("Could not find #{text} in settings file.")
 
-        console.log files
-
         device = new RpiCamDevice(this, files)
         @framework.registerDevice(device)
 
@@ -161,7 +159,6 @@ module.exports = (env) ->
 
     _onStatusRead: (status) ->
       if status is @_lastStatus then return
-      console.log status
       switch status
         when "ready"
           unless @_isEnabled is yes then @_setEnabled(yes)
@@ -209,7 +206,7 @@ module.exports = (env) ->
       return deferred.promise.timeout(5000)
 
     disableCamera: ->
-      if @_recording
+      if @_isRecording
         return Q.fcall => throw new Error("Can't disable camera while recording")
       unless @_isEnabled then return Q()
 
@@ -219,13 +216,16 @@ module.exports = (env) ->
       return deferred.promise.timeout(5000)
 
     recordImage: -> 
+      if @_isRecording
+        return Q.fcall => throw new Error("Can't capture image while recording")
+
       deferred = Q.defer()
       @_executeCommand('im').catch(deferred.reject)
       @once("status image", deferred.resolve)
       return deferred.promise.timeout(5000)
 
     recordVideoStart: -> 
-      if @_recording then return Q()
+      if @_isRecording then return Q()
 
       deferred = Q.defer()
       @_executeCommand('ca 1').catch(deferred.reject)
@@ -233,7 +233,7 @@ module.exports = (env) ->
       return deferred.promise.timeout(5000)
 
     recordVideoStop: -> 
-      unless @_recording then return Q()
+      unless @_isRecording then return Q()
 
       deferred = Q.defer()
       @_executeCommand('ca 0').catch(deferred.reject)

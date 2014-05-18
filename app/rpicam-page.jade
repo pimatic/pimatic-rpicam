@@ -7,6 +7,6 @@ div#rpicam(data-role='page')
     div.rpicam-full-previw
       img#rpicam-full-previce-img(data-bind="attr: {src: previewImageUrl }")
     div.rpicam-crontrols
-      a.ui-btn.ui-mini.ui-btn-inline.ui-corner-all(data-bind="click: onRecordVideoPress, text: videoButtonText, jqmbutton: {enabled: !hasPendingAction()")
-      a.ui-btn.ui-mini.ui-btn-inline.ui-corner-all(data-bind="click: onCaptureImagePress, jqmbutton: {enabled: !recording() && !hasPendingAction()")=__('Capture Image')
+      a.ui-btn.ui-mini.ui-btn-inline.ui-corner-all(data-bind="click: onRecordVideoPress, text: videoButtonText, jqmbutton: {enabled: enabled() && !hasPendingAction()}")
+      a.ui-btn.ui-mini.ui-btn-inline.ui-corner-all(data-bind="click: onCaptureImagePress, jqmbutton: {enabled: enabled() && !recording() && !hasPendingAction()}")=__('Capture Image')
       a.ui-btn.ui-mini.ui-btn-inline.ui-corner-all(data-bind="click: onEnableCameraPress, text: startCameraText, jqmbutton: {enabled: !recording() && !hasPendingAction()}")

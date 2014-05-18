@@ -1,8 +1,8 @@
 <script id="rpicam-template" type="text/template">
   <li class="sortable device no-header rpicam-device">
     <label data-bind="text: name" class="device-label"></label>
-    <div class="preview-buttons">
-    	<a data-bind="click: onRecordImagePress" class="ui-btn ui-mini ui-btn-inline ui-corner-all">Capture Image</a>
+    <div class="preview-info">
+      <span data-bind="text: infoText"></span> 
       <img class="rpicam-preview-thumb" data-bind="attr: {src: previewImageUrl }, click: onShowPress"></a>
     </div>
   </li>
