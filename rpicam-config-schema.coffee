@@ -4,7 +4,7 @@
 
 # Defines a `node-convict` config-schema and exports it.
 module.exports =
-  option1:
-    doc: "Some option"
+  raspimjpegSettingsFile:
+    doc: "raspimjpeg settings file"
     format: String
-    default: "foo"
+    default: "/etc/raspimjpeg"

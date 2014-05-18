@@ -1,12 +1,14 @@
 # log-page
 # ---------
 tc = pimatic.tryCatch
+
 $(document).on("pagecreate", '#rpicam', tc (event) ->
 
   class RpicamViewModel
 
     recording: ko.observable(no)
     enabled: ko.observable(no)
+    hasPendingAction: ko.observable(no)
 
     constructor: ->
       @deviceId = pimatic.rpicam.deviceId
@@ -14,7 +16,7 @@ $(document).on("pagecreate", '#rpicam', tc (event) ->
         if @recording() then __('Stop Recording') else __('Start Recording')
       )
       @startCameraText = ko.computed( =>
-        if @enabled() then __('Enable Camera') else __('Disable Camera')
+        if @enabled() then __('Disable Camera') else __('Enable Camera')
       )
       @previewUrl = '/rpicam/preview.jpg'
       @previewImageUrl = ko.observable(@previewUrl)
@@ -26,32 +28,42 @@ $(document).on("pagecreate", '#rpicam', tc (event) ->
       if recordingAttr.value()?
         @recording(recordingAttr.value())
 
-      console.log(ko.toJSON(this))
-
-      @updateTimeout = setInterval((=> @updatePreview()), 1000/5);
-
     updatePreview: ->
       # to prevent caching
       time = (new Date()).getTime()
       @previewImageUrl("#{@previewUrl}?#{time}")
 
+    stopUpdatePreview: ->
+      clearTimeout(@updateTimeout)
+
+    startUpdatePreview: ->
+      clearTimeout(@updateTimeout)
+      @updateTimeout = setInterval((=> @updatePreview()), 1000/5);
+
     onRecordVideoPress: -> 
       if @recording()
-        $.get("/api/device/#{@deviceId}/recordVideoStop").fail(ajaxAlertFail)
+        @_makeRequest('recordVideoStop')
       else
-        $.get("/api/device/#{@deviceId}/recordVideoStart").fail(ajaxAlertFail)
+        @_makeRequest('recordVideoStart')
     onCaptureImagePress: -> 
-      $.get("/api/device/#{@deviceId}/recordImage").fail(ajaxAlertFail)
+       @_makeRequest('recordImage')
     onEnableCameraPress: -> 
-      if @recording()
-        $.get("/api/device/#{@deviceId}/enableCamera").fail(ajaxAlertFail)
+      if @enabled()
+        @_makeRequest('disableCamera').done( => @stopUpdatePreview() )
       else
-        $.get("/api/device/#{@deviceId}/disableCamera").fail(ajaxAlertFail)
+        @_makeRequest('enableCamera').done( => @startUpdatePreview() )
+
+    _makeRequest: (action) ->
+      @hasPendingAction(yes)
+      $.get("/api/device/#{@deviceId}/#{action}")
+        .fail(ajaxAlertFail)
+        .always( => @hasPendingAction(no) )
 
   try
     pimatic.pages.rpicam = rpicam = new RpicamViewModel()
 
     pimatic.socket.on("device-attribute", tc (attrEvent) -> 
+      unless pimatic.rpicam? then return
       unless attrEvent.id is pimatic.rpicam.deviceId then return
       console.log attrEvent
       switch attrEvent.name
@@ -63,4 +75,18 @@ $(document).on("pagecreate", '#rpicam', tc (event) ->
   catch e
     TraceKit.report(e)
   return
+)
+
+
+$(document).on("pagehide", '#rpicam', (event) ->
+  pimatic.pages.rpicam?.stopUpdatePreview()
+  return
+)
+
+$(document).on("pagebeforeshow", '#rpicam', (event) ->
+  unless pimatic.rpicam?
+    jQuery.mobile.changePage '#index'
+    return false
+  pimatic.pages.rpicam.deviceId = pimatic.rpicam.deviceId
+  pimatic.pages.rpicam.startUpdatePreview()
 )

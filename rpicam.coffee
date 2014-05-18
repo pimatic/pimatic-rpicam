@@ -18,6 +18,8 @@ module.exports = (env) ->
 
   class RpiCam extends env.plugins.Plugin
 
+
+
     init: (app, @framework, config) =>
       # Require your config schema
       @conf = convict require("./rpicam-config-schema")
@@ -25,8 +27,39 @@ module.exports = (env) ->
       @conf.load(config)
       @conf.validate()
 
-      device = new RpiCamDevice(this)
-      @framework.registerDevice(device)
+      raspimjpegSettingsFile = @conf.get "raspimjpegSettingsFile"
+      #Do some checks:
+
+      deferred = Q.defer()
+
+      files = {}
+
+      Q.nfcall(fs.readFile, raspimjpegSettingsFile, 'utf8').then( (settings) =>
+
+        fileSettings = {
+          previewImage: 'preview_path'
+          imageFile: 'image_path'
+          videoFile: 'video_path'
+          status: 'status_file'
+          control: 'control_file'
+        }
+
+        for name, text of fileSettings
+          regexp = new RegExp("^#{text} (.+)$", "m")
+          if (match = regexp.exec settings)?
+            files[name] = match[1]
+          else
+            throw new Error ("Could not find #{text} in settings file.")
+
+        console.log files
+
+        device = new RpiCamDevice(this, files)
+        @framework.registerDevice(device)
+
+      ).catch( (error) =>
+        env.logger.error("Error reading raspimjpeg config file (#{raspimjpegSettingsFile}): #{error.message}")
+        env.logger.debug(error)
+      ).done()
 
       @framework.on "after init", =>
         mobileFrontend = @framework.getPlugin 'mobile-frontend'
@@ -40,7 +73,10 @@ module.exports = (env) ->
           env.logger.warn "rpicam could not find mobile-frontend. No gui will be available"
 
       app.get('/rpicam/preview.jpg', (req, res) =>
-        res.sendfile(device.picFile)
+        if files.previewImage?
+          res.sendfile(files.previewImage)
+        else
+          res.end()
       )
 
   ###
@@ -106,33 +142,107 @@ module.exports = (env) ->
       recordVideoStop:
         description: "stop video capture"
 
-    commandFIFO: '/home/pi/FIFO'
-    picFile: '/dev/shm/mjpeg/cam.jpg' 
+    _isEnabled: no
+    _isRecording: no
+    _lastStatus: null
 
-    constructor: (@plugin) ->
+    constructor: (@plugin, @files) ->
       @name = "Raspberry Pi Camera"
       @id = "rpicam"
+
+      fs.watch(@files.status, {persistent: false}, (type) => @_readStatus().done() )
+      @_readStatus().done()
       super()
+
+    _readStatus: ->
+      Q.nfcall(fs.readFile, @files.status, 'utf8').then( (status) =>
+        @_onStatusRead(status.trim())
+      )
+
+    _onStatusRead: (status) ->
+      if status is @_lastStatus then return
+      console.log status
+      switch status
+        when "ready"
+          unless @_isEnabled is yes then @_setEnabled(yes)
+          unless @_isRecording is no then @_setRecording(no)
+        when "halted"
+          unless @_isEnabled is no then @_setEnabled(no)
+          unless @_isRecording is no then @_setRecording(no)
+        when "video"
+          unless @_isEnabled is yes then @_setEnabled(yes)
+          unless @_isRecording is yes then @_setRecording(yes)
+        else
+          if (match = status.match("^Error: (.+)"))?
+            env.logger.error("rpicam error from raspimjpeg: " + match[1])
+            unless @_isEnabled is no then @_setEnabled(no)
+            unless @_isRecording is no then @_setRecording(no)
+
+      @emit "status #{status}"
+      @_lastStatus = status
 
     _executeCommand: (cmd) ->
       deferred = Q.defer()
       try
-        fifo = fs.createWriteStream(@commandFIFO)
+        fifo = fs.createWriteStream(@files.control)
         fifo.end(cmd, 'ascii', => (deferred.resolve()) )
       catch e
         deferred.reject e
       return deferred.promise 
 
+    _setEnabled: (state) =>
+      @_isEnabled = state
+      @emit 'enabled', state
+
+    _setRecording: (state) =>
+      @_isRecording = state
+      @emit 'recording', state
+
     getTemplateName: -> 'rpicam'
 
-    enableCamera: -> @_executeCommand('ru 1')
-    disableCamera: -> @_executeCommand('ru 0')
-    recordImage: -> @_executeCommand('im')
-    recordVideoStart: -> @_executeCommand('ca 1')
-    recordVideoStop: -> @_executeCommand('ca 2')
+    enableCamera: -> 
+      if @_isEnabled then return Q()
 
-    getEnabled: -> Q(yes)
-    getRecording: -> Q(yes)
+      deferred = Q.defer()
+      @_executeCommand('ru 1').catch(deferred.reject)
+      @once("status ready", deferred.resolve)
+      return deferred.promise.timeout(5000)
+
+    disableCamera: ->
+      if @_recording
+        return Q.fcall => throw new Error("Can't disable camera while recording")
+      unless @_isEnabled then return Q()
+
+      deferred = Q.defer()
+      @_executeCommand('ru 0').catch(deferred.reject)
+      @once("status halted", deferred.resolve)
+      return deferred.promise.timeout(5000)
+
+    recordImage: -> 
+      deferred = Q.defer()
+      @_executeCommand('im').catch(deferred.reject)
+      @once("status image", deferred.resolve)
+      return deferred.promise.timeout(5000)
+
+    recordVideoStart: -> 
+      if @_recording then return Q()
+
+      deferred = Q.defer()
+      @_executeCommand('ca 1').catch(deferred.reject)
+      @once("status video", deferred.resolve)
+      return deferred.promise.timeout(5000)
+
+    recordVideoStop: -> 
+      unless @_recording then return Q()
+
+      deferred = Q.defer()
+      @_executeCommand('ca 0').catch(deferred.reject)
+      @once("status ready", deferred.resolve)
+      @once("status halted", deferred.resolve)
+      return deferred.promise.timeout(5000)
+
+    getEnabled: -> Q(@_isEnabled)
+    getRecording: -> Q(@_isRecording)
 
 
   # ###Finally
