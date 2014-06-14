@@ -94,6 +94,8 @@ module.exports = (env) ->
       recordVideoStop:
         description: "stop video capture"
 
+    template: 'rpicam'
+
     commandFIFO: '/home/pi/FIFO'
     picFile: '/dev/shm/mjpeg/cam.jpg' 
 
@@ -110,8 +112,6 @@ module.exports = (env) ->
       catch e
         deferred.reject e
       return deferred.promise 
-
-    getTemplateName: -> 'rpicam'
 
     startCamera: -> @_executeCommand('ru 1')
     stopCamera: -> @_executeCommand('ru 0')
