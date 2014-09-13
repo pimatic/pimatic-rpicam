@@ -1,10 +1,9 @@
-# #my-plugin configuration options
-
-# Declare your config option for your plugin here. 
-
-# Defines a `node-convict` config-schema and exports it.
-module.exports =
-  raspimjpegSettingsFile:
-    doc: "raspimjpeg settings file"
-    format: String
-    default: "/etc/raspimjpeg"
+module.exports = {
+  title: "RPI Camera"
+  type: "object"
+  properties:
+    raspimjpegSettingsFile:
+      doc: "raspimjpeg settings file"
+      format: String
+      default: "/etc/raspimjpeg"
+}

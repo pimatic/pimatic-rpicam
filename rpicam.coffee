@@ -5,36 +5,22 @@ module.exports = (env) ->
   # To require modules that are included in pimatic use `env.require`. For available packages take 
   # a look at the dependencies section in pimatics package.json
 
-  # Require [convict](https://github.com/mozilla/node-convict) for config validation.
+  Promise = env.require 'bluebird'
   convict = env.require "convict"
-
-  # Require the [Q](https://github.com/kriskowal/q) promise library
-  Q = env.require 'q'
-
-  # Require the [cassert library](https://github.com/rhoot/cassert).
   assert = env.require 'cassert'
 
-  fs = require 'fs'
+  fs = Promise.promisifyAll(require 'fs')
 
   class RpiCam extends env.plugins.Plugin
 
-
-
     init: (app, @framework, config) =>
-      # Require your config schema
-      @conf = convict require("./rpicam-config-schema")
-      # and validate the given config.
-      @conf.load(config)
-      @conf.validate()
+      raspimjpegSettingsFile = config.raspimjpegSettingsFile
 
-      raspimjpegSettingsFile = @conf.get "raspimjpegSettingsFile"
-      #Do some checks:
-
-      deferred = Q.defer()
+      deferred = Promise.pending()
 
       files = {}
 
-      Q.nfcall(fs.readFile, raspimjpegSettingsFile, 'utf8').then( (settings) =>
+      fs.readFileAsync(raspimjpegSettingsFile, 'utf8').then( (settings) =>
 
         fileSettings = {
           previewImage: 'preview_path'
@@ -52,7 +38,7 @@ module.exports = (env) ->
             throw new Error ("Could not find #{text} in settings file.")
 
         device = new RpiCamDevice(this, files)
-        @framework.registerDevice(device)
+        @framework.deviceManager.registerDevice(device)
 
       ).catch( (error) =>
         env.logger.error("Error reading raspimjpeg config file (#{raspimjpegSettingsFile}): #{error.message}")
@@ -60,7 +46,7 @@ module.exports = (env) ->
       ).done()
 
       @framework.on "after init", =>
-        mobileFrontend = @framework.getPlugin 'mobile-frontend'
+        mobileFrontend = @framework.pluginManager.getPlugin 'mobile-frontend'
         if mobileFrontend?
           mobileFrontend.registerAssetFile 'js', "pimatic-rpicam/app/rpicam-item.coffee"
           mobileFrontend.registerAssetFile 'js', "pimatic-rpicam/app/rpicam-page.coffee"
@@ -121,11 +107,11 @@ module.exports = (env) ->
     attributes:
       enabled:
         description: "camera enabled"
-        type: Boolean
+        type: "boolean"
         labels: ['on', 'off']
       recording:
         description: "video recording status"
-        type: Boolean
+        type: "boolean"
         labels: ['recording', 'stopped']
 
     actions: 
@@ -153,7 +139,7 @@ module.exports = (env) ->
       super()
 
     _readStatus: ->
-      Q.nfcall(fs.readFile, @files.status, 'utf8').then( (status) =>
+      fs.readFileAsync(@files.status, 'utf8').then( (status) =>
         @_onStatusRead(status.trim())
       )
 
@@ -179,7 +165,7 @@ module.exports = (env) ->
       @_lastStatus = status
 
     _executeCommand: (cmd) ->
-      deferred = Q.defer()
+      deferred = Promise.pending()
       try
         fifo = fs.createWriteStream(@files.control)
         fifo.end(cmd, 'ascii', => (deferred.resolve()) )
@@ -198,51 +184,51 @@ module.exports = (env) ->
     getTemplateName: -> 'rpicam'
 
     enableCamera: -> 
-      if @_isEnabled then return Q()
+      if @_isEnabled then return Promise.resolve()
 
-      deferred = Q.defer()
+      deferred = Promise.pending()
       @_executeCommand('ru 1').catch(deferred.reject)
       @once("status ready", deferred.resolve)
       return deferred.promise.timeout(5000)
 
     disableCamera: ->
       if @_isRecording
-        return Q.fcall => throw new Error("Can't disable camera while recording")
-      unless @_isEnabled then return Q()
+        return Promise.promisify => throw new Error("Can't disable camera while recording")
+      unless @_isEnabled then return Promise.resolve()
 
-      deferred = Q.defer()
+      deferred = Promise.pending()
       @_executeCommand('ru 0').catch(deferred.reject)
       @once("status halted", deferred.resolve)
       return deferred.promise.timeout(5000)
 
     recordImage: -> 
       if @_isRecording
-        return Q.fcall => throw new Error("Can't capture image while recording")
+        return Promise.promisify => throw new Error("Can't capture image while recording")
 
-      deferred = Q.defer()
+      deferred = Promise.pending()
       @_executeCommand('im').catch(deferred.reject)
       @once("status image", deferred.resolve)
       return deferred.promise.timeout(5000)
 
     recordVideoStart: -> 
-      if @_isRecording then return Q()
+      if @_isRecording then return Promise.resolve() 
 
-      deferred = Q.defer()
+      deferred = Promise.pending()
       @_executeCommand('ca 1').catch(deferred.reject)
       @once("status video", deferred.resolve)
       return deferred.promise.timeout(5000)
 
     recordVideoStop: -> 
-      unless @_isRecording then return Q()
+      unless @_isRecording then return Promise.resolve()
 
-      deferred = Q.defer()
+      deferred = Promise.pending()
       @_executeCommand('ca 0').catch(deferred.reject)
       @once("status ready", deferred.resolve)
       @once("status halted", deferred.resolve)
       return deferred.promise.timeout(5000)
 
-    getEnabled: -> Q(@_isEnabled)
-    getRecording: -> Q(@_isRecording)
+    getEnabled: -> Promise.resolve(@_isEnabled)
+    getRecording: -> Promise.resolve(@_isRecording)
 
 
   # ###Finally
