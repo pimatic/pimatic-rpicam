@@ -182,8 +182,6 @@ module.exports = (env) ->
       @_isRecording = state
       @emit 'recording', state
 
-    getTemplateName: -> 'rpicam'
-
     enableCamera: -> 
       if @_isEnabled then return Promise.resolve()
 
