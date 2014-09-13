@@ -1,21 +1,21 @@
-
 module.exports = (env) ->
 
-  # Require the [bluebird](https://github.com/petkaantonov/bluebird) promise library
+  # ###require modules included in pimatic
+  # To require modules that are included in pimatic use `env.require`. For available packages take 
+  # a look at the dependencies section in pimatics package.json
+
   Promise = env.require 'bluebird'
-  # Require the [cassert library](https://github.com/rhoot/cassert).
+  convict = env.require "convict"
   assert = env.require 'cassert'
-  fs = require 'fs'; Promise.promisifyAll(fs);
+
+  fs = Promise.promisifyAll(require 'fs')
 
   class RpiCam extends env.plugins.Plugin
 
-
     init: (app, @framework, config) =>
+      raspimjpegSettingsFile = config.raspimjpegSettingsFile
 
-      raspimjpegSettingsFile = @conf.get "raspimjpegSettingsFile"
-      #Do some checks:
-
-      deferred = Q.defer()
+      deferred = Promise.pending()
 
       files = {}
 
@@ -140,7 +140,7 @@ module.exports = (env) ->
       super()
 
     _readStatus: ->
-      Q.nfcall(fs.readFile, @files.status, 'utf8').then( (status) =>
+      fs.readFileAsync(@files.status, 'utf8').then( (status) =>
         @_onStatusRead(status.trim())
       )
 
@@ -166,7 +166,7 @@ module.exports = (env) ->
       @_lastStatus = status
 
     _executeCommand: (cmd) ->
-      deferred = Q.defer()
+      deferred = Promise.pending()
       try
         fifo = fs.createWriteStream(@files.control)
         fifo.end(cmd, 'ascii', => (deferred.resolve()) )
@@ -187,7 +187,7 @@ module.exports = (env) ->
     enableCamera: -> 
       if @_isEnabled then return Promise.resolve()
 
-      deferred = Q.defer()
+      deferred = Promise.pending()
       @_executeCommand('ru 1').catch(deferred.reject)
       @once("status ready", deferred.resolve)
       return deferred.promise.timeout(5000)
@@ -197,7 +197,7 @@ module.exports = (env) ->
         return Promise.try => throw new Error("Can't disable camera while recording")
       unless @_isEnabled then return Promise.resolve()
 
-      deferred = Q.defer()
+      deferred = Promise.pending()
       @_executeCommand('ru 0').catch(deferred.reject)
       @once("status halted", deferred.resolve)
       return deferred.promise.timeout(5000)
@@ -206,7 +206,7 @@ module.exports = (env) ->
       if @_isRecording
         return Promise.try => throw new Error("Can't capture image while recording")
 
-      deferred = Q.defer()
+      deferred = Promise.pending()
       @_executeCommand('im').catch(deferred.reject)
       @once("status image", deferred.resolve)
       return deferred.promise.timeout(5000)
@@ -214,7 +214,7 @@ module.exports = (env) ->
     recordVideoStart: -> 
       if @_isRecording then return Promise.resolve()
 
-      deferred = Q.defer()
+      deferred = Promise.pending()
       @_executeCommand('ca 1').catch(deferred.reject)
       @once("status video", deferred.resolve)
       return deferred.promise.timeout(5000)
@@ -222,7 +222,7 @@ module.exports = (env) ->
     recordVideoStop: -> 
       unless @_isRecording then return Promise.resolve()
 
-      deferred = Q.defer()
+      deferred = Promise.pending()
       @_executeCommand('ca 0').catch(deferred.reject)
       @once("status ready", deferred.resolve)
       @once("status halted", deferred.resolve)
