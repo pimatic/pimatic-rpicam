@@ -126,6 +126,8 @@ module.exports = (env) ->
       recordVideoStop:
         description: "stop video capture"
 
+    template: "rpicam"
+
     _isEnabled: no
     _isRecording: no
     _lastStatus: null
@@ -180,8 +182,6 @@ module.exports = (env) ->
     _setRecording: (state) =>
       @_isRecording = state
       @emit 'recording', state
-
-    getTemplateName: -> 'rpicam'
 
     enableCamera: -> 
       if @_isEnabled then return Promise.resolve()
