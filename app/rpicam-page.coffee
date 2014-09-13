@@ -59,17 +59,17 @@ $(document).on("pagecreate", '#rpicam', tc (event) ->
 
     _makeRequest: (action) ->
       @hasPendingAction(yes)
-      $.get("/api/device/#{@deviceId}/#{action}")
+      pimatic.rpicam?.rest[action]({}, global: no)
         .fail(ajaxAlertFail)
         .always( => @hasPendingAction(no) )
 
   console.log "create page"
   pimatic.pages.rpicam = rpicam = new RpicamViewModel()
 
-  pimatic.socket.on("device-attribute", tc (attrEvent) -> 
+  pimatic.socket.on("deviceAttributeChanged", tc (attrEvent) -> 
     unless pimatic.rpicam? then return
-    unless attrEvent.id is pimatic.rpicam.deviceId then return
-    switch attrEvent.name
+    unless attrEvent.deviceId is pimatic.rpicam.deviceId then return
+    switch attrEvent.attributeName
       when 'enabled' then rpicam.enabled(attrEvent.value)
       when 'recording' then rpicam.recording(attrEvent.value)
   )

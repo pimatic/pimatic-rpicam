@@ -2,8 +2,9 @@
 $(document).on( "templateinit", (event) ->
   # define the item class
   class RpiCamDeviceItem extends pimatic.DeviceItem
-    constructor: (data) ->
-      super(data)
+    
+    constructor: (templData, @device) ->
+      super(templData, @device)
       @previewUrl = '/rpicam/preview.jpg'
       @previewImageUrl = ko.observable(@previewUrl)
       @updatePreview()
