@@ -40,7 +40,9 @@ module.exports = (env) ->
         @framework.deviceManager.registerDevice(device)
 
       ).catch( (error) =>
-        env.logger.error("Error reading raspimjpeg config file (#{raspimjpegSettingsFile}): #{error.message}")
+        env.logger.error(
+          "Error reading raspimjpeg config file (#{raspimjpegSettingsFile}): #{error.message}"
+        )
         env.logger.debug(error)
       ).done()
 
